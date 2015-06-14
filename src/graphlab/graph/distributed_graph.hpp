@@ -19,6 +19,7 @@
  *      http://ipads.se.sjtu.edu.cn/projects/powerlyra.html
  *
  *
+ * 2015.06  re-support batch ingress (coordinated vertex-cut)
  * 2014.02  add calling to bipartitie-aware partitioning
  * 2013.11  add calling to hybrid partitioning for power-law graphs
  *
@@ -104,6 +105,7 @@
 #include <graphlab/graph/ingress/distributed_oblivious_ingress.hpp>
 #include <graphlab/graph/ingress/distributed_random_ingress.hpp>
 #include <graphlab/graph/ingress/distributed_identity_ingress.hpp>
+#include <graphlab/graph/ingress/distributed_batch_ingress.hpp>
 
 #include <graphlab/graph/ingress/sharding_constraint.hpp>
 #include <graphlab/graph/ingress/distributed_constrained_random_ingress.hpp>
@@ -436,9 +438,12 @@ namespace graphlab {
     friend class distributed_identity_ingress<VertexData, EdgeData>;
     friend class distributed_oblivious_ingress<VertexData, EdgeData>;
     friend class distributed_constrained_random_ingress<VertexData, EdgeData>;
+    friend class distributed_batch_ingress<VertexData, EdgeData>;
+        
     friend class distributed_bipartite_random_ingress<VertexData, EdgeData>;
     friend class distributed_bipartite_affinity_ingress<VertexData, EdgeData>;
     friend class distributed_bipartite_aweto_ingress<VertexData, EdgeData>;
+
     friend class distributed_hybrid_ingress<VertexData, EdgeData>;
     friend class distributed_hybrid_ginger_ingress<VertexData, EdgeData>;
 
@@ -2271,9 +2276,10 @@ namespace graphlab {
         logstream(LOG_WARNING) << "No files found matching " << original_path << std::endl;
       }
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+// The batch ingress does not support parallel loading graph by multiple threads
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
       for(size_t i = 0; i < graph_files.size(); ++i) {
         if ((parallel_ingress && (i % rpc.numprocs() == rpc.procid()))
             || (!parallel_ingress && (rpc.procid() == 0))
@@ -2326,9 +2332,10 @@ namespace graphlab {
         logstream(LOG_WARNING) << "No files found matching " << prefix << std::endl;
       }
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
+// The batch ingress does not support parallel loading graph by multiple threads
+//#ifdef _OPENMP
+//#pragma omp parallel for
+//#endif
       for(size_t i = 0; i < graph_files.size(); ++i) {
         if ((parallel_ingress && (i % rpc.numprocs() == rpc.procid())) ||
             (!parallel_ingress && (rpc.procid() == 0))) {
@@ -3302,6 +3309,12 @@ namespace graphlab {
       } else if (method == "pds") {
         if (rpc.procid() == 0)logstream(LOG_EMPH) << "Use pds ingress" << std::endl;
         ingress_ptr = new distributed_constrained_random_ingress<VertexData, EdgeData>(rpc.dc(), *this, "pds");
+      } 
+      // batch ingress is deprecated by graphlab (just for test and evaluation)
+      else if (method == "batch") {
+        if (rpc.procid() == 0) logstream(LOG_EMPH) << "Use batch ingress" << ", bufsize: " << bufsize
+          << ", usehash: " << usehash << ", userecent" << userecent << std::endl;
+        ingress_ptr = new distributed_batch_ingress<VertexData, EdgeData>(rpc.dc(), *this, bufsize, usehash, userecent);
       } else if (method == "bipartite") {
         if(data_affinity){
           if (rpc.procid() == 0) logstream(LOG_EMPH) << "Use bipartite ingress w/ affinity" << std::endl;
@@ -3339,13 +3352,6 @@ namespace graphlab {
         }
         if (rpc.procid() == 0) logstream(LOG_EMPH) << "Automatically determine ingress method: " << ingress_auto << std::endl;
       }
-      // batch ingress is deprecated
-      // if (method == "batch") {
-      //   logstream(LOG_EMPH) << "Use batch ingress, bufsize: " << bufsize
-      //     << ", usehash: " << usehash << ", userecent" << userecent << std::endl;
-      //   ingress_ptr = new distributed_batch_ingress<VertexData, EdgeData>(rpc.dc(), *this,
-      //                                                    bufsize, usehash, userecent);
-      // } else 
     } // end of set ingress method
 
 
