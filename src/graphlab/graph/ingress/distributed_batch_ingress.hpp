@@ -164,10 +164,21 @@
      void finalize() { 
        graphlab::timer ti;
        rpc.full_barrier();
+
+       
+       /**
+        * Fast pass for redundant finalization with no graph changes. 
+        */
+       {
+         size_t changed_size = num_edges + base_type::vertex_exchange.size();
+         rpc.all_reduce(changed_size);
+         if (changed_size == 0) {
+           logstream(LOG_INFO) << "Skipping Graph Finalization because no changes happened..." << std::endl;
+           return;
+         }
+       }
+       
        flush(); 
- 
-       //rpc.full_barrier();
-       //base_type::finalize();
        base_finalize();
        rpc.full_barrier();
  
@@ -255,7 +266,7 @@
              }
            }
          }
-          base_type::vertex_exchange.clear();
+         base_type::vertex_exchange.clear();
          if(rpc.procid() == 0)         
            memory_info::log_usage("Finished adding vertex data");
        } // end of loop to populate vrecmap
