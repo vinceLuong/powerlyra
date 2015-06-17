@@ -107,7 +107,9 @@
  
      /** Local minibatch buffer */
      /** Number of edges in the current buffer. */
-     size_t num_edges; 
+     size_t num_edges;
+     /** Number of edges is total loaded */
+     size_t num_edges_load;
      /** Capacity of the local buffer. */
      size_t bufsize; 
      std::vector<std::pair<vertex_id_type, vertex_id_type> > edgesend;
@@ -133,7 +135,7 @@
      distributed_batch_ingress(distributed_control& dc, graph_type& graph, 
          size_t bufsize = 50000, bool usehash = false, bool userecent = false) :
        base_type(dc, graph), rpc(dc, this),
-       num_edges(0), bufsize(bufsize), query_set(dc.numprocs()),
+       num_edges(0), num_edges_load(0), bufsize(bufsize), query_set(dc.numprocs()),
        proc_num_edges(dc.numprocs()), usehash(usehash), userecent(userecent) { 
         rpc.barrier(); 
  
@@ -163,6 +165,9 @@
      /** Flush the buffer and call base finalize. */; 
      void finalize() { 
        graphlab::timer ti;
+
+       // send the rest edges
+       flush();
        rpc.full_barrier();
 
        
@@ -170,7 +175,7 @@
         * Fast pass for redundant finalization with no graph changes. 
         */
        {
-         size_t changed_size = num_edges + base_type::vertex_exchange.size();
+         size_t changed_size = num_edges_load + base_type::vertex_exchange.size();
          rpc.all_reduce(changed_size);
          if (changed_size == 0) {
            logstream(LOG_INFO) << "Skipping Graph Finalization because no changes happened..." << std::endl;
@@ -178,7 +183,7 @@
          }
        }
        
-       flush(); 
+       
        base_finalize();
        rpc.full_barrier();
  
@@ -194,12 +199,12 @@
        graphlab::timer mytimer; mytimer.start();
  
        rpc.full_barrier();
- 
+
+       size_t num_vertices = base_type::graph.local_graph.num_vertices();
+       rpc.all_reduce(num_vertices);
        if (rpc.procid() == 0) {
          logstream(LOG_EMPH) << "Finalizing Graph ... " 
-                             << " #vertices=" <<  base_type::graph.local_graph.num_vertices()
-                             << " #edges=" <<  base_type::graph.local_graph.num_edges()
-                             << std::endl;
+                             << " #vertices=" << num_vertices << std::endl;
        }
  
        typedef typename hopscotch_map<vertex_id_type, lvid_type>::value_type
@@ -604,7 +609,12 @@
        std::vector< std::vector<vertex_id_type> > proc_src(rpc.numprocs());
        std::vector< std::vector<vertex_id_type> > proc_dst(rpc.numprocs());
        std::vector< std::vector<EdgeData> > proc_edata(rpc.numprocs());
+
+       num_edges_load += num_edges;
+
+       // decision of target machine for all edges
        assign_edges(proc_src, proc_dst, proc_edata);
+       
        for (size_t i = 0; i < proc_src.size(); ++i) {
          if (proc_src[i].size() == 0) 
            continue;
@@ -617,6 +627,9 @@
            num_edges -= proc_src[i].size();
          } // end if
        } // end for
+
+       rpc.full_barrier();
+       ASSERT_EQ(num_edges, 0);
      } // end flush
  
      /** Returns the number of edges  in the buffer. */
