@@ -347,16 +347,20 @@ endmacro(requires_opencv)
 if (APPLE)
   ExternalProject_Add(libevent
     PREFIX ${GraphLab_SOURCE_DIR}/deps/event
-    URL http://iweb.dl.sourceforge.net/project/levent/libevent/libevent-2.0/libevent-2.0.18-stable.tar.gz
-    URL_MD5 aa1ce9bc0dee7b8084f6855765f2c86a
+    # URL http://iweb.dl.sourceforge.net/project/levent/libevent/libevent-2.0/libevent-2.0.18-stable.tar.gz
+    URL https://github.com/libevent/libevent/releases/download/release-2.1.8-stable/libevent-2.1.8-stable.tar.gz
+    # URL_MD5 aa1ce9bc0dee7b8084f6855765f2c86a
+    URL_MD5 f3eeaed018542963b7d2416ef1135ecc
     CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-openssl --enable-shared=no
     INSTALL_DIR ${GraphLab_SOURCE_DIR}/deps/local
   )
 else()
   ExternalProject_Add(libevent
     PREFIX ${GraphLab_SOURCE_DIR}/deps/event
-    URL http://iweb.dl.sourceforge.net/project/levent/libevent/libevent-2.0/libevent-2.0.18-stable.tar.gz
-    URL_MD5 aa1ce9bc0dee7b8084f6855765f2c86a
+    # URL http://iweb.dl.sourceforge.net/project/levent/libevent/libevent-2.0/libevent-2.0.18-stable.tar.gz
+    URL https://github.com/libevent/libevent/releases/download/release-2.1.8-stable/libevent-2.1.8-stable.tar.gz
+    # URL_MD5 aa1ce9bc0dee7b8084f6855765f2c86a
+    URL_MD5 f3eeaed018542963b7d2416ef1135ecc
     CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-openssl --enable-shared=no
     INSTALL_DIR ${GraphLab_SOURCE_DIR}/deps/local
     INSTALL_COMMAND prefix=<INSTALL_DIR>/ make install && ${GraphLab_SOURCE_DIR}/patches/libevent_clean_and_remap.sh <INSTALL_DIR>/lib
