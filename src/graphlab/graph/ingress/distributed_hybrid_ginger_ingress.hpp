@@ -182,6 +182,8 @@ namespace graphlab {
      */
     void add_edge(vertex_id_type source, vertex_id_type target,
                   const EdgeData& edata) {
+      logstream(LOG_INFO) << "ADD_EDGE" << std::endl;  
+        
       const edge_buffer_record record(source, target, edata);
       const procid_t owning_proc = standalone ? 0 :
         graph_hash::hash_vertex(target) % hybrid_rpc.numprocs();
@@ -195,6 +197,8 @@ namespace graphlab {
 
     /* add vdata */
     void add_vertex(vertex_id_type vid, const VertexData& vdata) { 
+      logstream(LOG_INFO) << "ADD_VERTEX" << std::endl;  
+        
       const vertex_buffer_record record(vid, vdata);
       const procid_t owning_proc = standalone ? 0 :
         graph_hash::hash_vertex(vid) % hybrid_rpc.numprocs();
@@ -209,6 +213,8 @@ namespace graphlab {
     /* ginger heuristic for low-degree vertex */
     procid_t ginger_to_proc (const vertex_id_type target,
         const std::vector<edge_buffer_record>& records) {
+      logstream(LOG_INFO) << "GINGER_TO_PROC" << std::endl;    
+        
       size_t nprocs = hybrid_rpc.numprocs();    
       std::vector<double> proc_score(nprocs);
       std::vector<int> proc_degrees(nprocs);
@@ -237,6 +243,8 @@ namespace graphlab {
 
     /* ginger heuristic for low-degree vertex */
     void sync_heuristic() {
+      logstream(LOG_INFO) << "SYNC" << std::endl;    
+        
       size_t nprocs = hybrid_rpc.numprocs();
       procid_t l_procid = hybrid_rpc.procid();
 
